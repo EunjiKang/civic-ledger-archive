@@ -26,7 +26,7 @@ jobs:
         run: unzip -q Civic_Ledger_GitHub_v23.zip -d publication
       - name: Prepare public pages and sharing metadata
         env:
-          PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
+          PAGES_BASE_URL: https://archive.civicledger.city
         run: python3 publication/tools/prepare_pages.py --base-url "$PAGES_BASE_URL" --output _site
       - uses: actions/upload-pages-artifact@v4
         with:

@@ -83,6 +83,50 @@ jobs:
               content = content.replace('</body>', '<script id="' + marker + '">' + script + '</script>\n</body>')
               page.write_text(content, encoding='utf-8')
           PY
+      - name: Prepare complete downloadable package
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil, hashlib, os
+          root = Path('release-package')
+          site = Path('publication/_site')
+          index = (site / 'index.html').read_text(encoding='utf-8')
+          for marker in ['비판적 검토 및 피드백', '프로젝트팀', 'Project team', 'margin-bottom: 4px']:
+              assert marker in index, marker
+          assert (site / 'assets').is_dir()
+          shutil.copytree(site, root / 'website')
+          source = root / 'source'
+          (source / '.github/workflows').mkdir(parents=True)
+          shutil.copy2('Civic_Ledger_GitHub_v23.zip', source)
+          shutil.copy2('.github/workflows/pages.yml', source / '.github/workflows/pages.yml')
+          readme = '''Civic Ledger — Complete package — 2026-09-28
+
+          website/: Ready-to-publish website with all current changes, images, diagrams and downloadable PDFs. Publish the CONTENTS of this folder as the web root.
+
+          source/: Original publication package plus the current GitHub Actions workflow. The workflow applies all subsequent updates and recreates the website. The original ZIP alone does not contain the latest updates; retain the workflow with it.
+
+          Included updates: bilingual article credits; Korean critical review names; Project team labels; single-paragraph project notes; compact credit-heading spacing; search-line spacing; language flags and footer links; reading-note spacing; matching Contact typography and full-width Korean meeting description. All earlier site assets and changes are retained.
+
+          To preview, use a local web server or static hosting. Do not rely on opening index.html as a file URL.
+          '''
+          (root / 'README.txt').write_text(readme, encoding='utf-8')
+          (root / 'BUILD_COMMIT.txt').write_text(os.environ['GITHUB_SHA'] + '\n', encoding='utf-8')
+          manifest = []
+          for file in sorted(root.rglob('*')):
+              if file.is_file():
+                  digest = hashlib.sha256(file.read_bytes()).hexdigest()
+                  manifest.append(digest + '  ' + file.relative_to(root).as_posix())
+          (root / 'SHA256SUMS.txt').write_text('\n'.join(manifest) + '\n', encoding='utf-8')
+          print('Packaged', len(manifest), 'files')
+          PY
+      - name: Upload complete website package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Civic_Ledger_Full_Package_2026-09-28
+          path: release-package/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
       - uses: actions/upload-pages-artifact@v4
         with:
           path: publication/_site

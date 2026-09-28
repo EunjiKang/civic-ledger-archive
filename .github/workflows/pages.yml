@@ -28,6 +28,45 @@ jobs:
         env:
           PAGES_BASE_URL: https://archive.civicledger.city
         run: python3 publication/tools/prepare_pages.py --base-url "$PAGES_BASE_URL" --output _site
+      - name: Localise language controls and development team footer
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          script = r'''(() => {
+            const labels = {en: '🇬🇧 English', ko: '🇰🇷 한국어'};
+            function updateLanguageDetails() {
+              document.querySelectorAll('button[data-lang]').forEach(button => {
+                const label = labels[button.dataset.lang];
+                if (label && button.textContent !== label) button.textContent = label;
+              });
+              const koreanButton = document.querySelector('button[data-lang="ko"]');
+              const korean = koreanButton ? koreanButton.getAttribute('aria-pressed') === 'true' : document.documentElement.lang.startsWith('ko');
+              const team = document.getElementById('footer-contributors-title');
+              const title = korean ? '개발팀' : 'Development team';
+              if (team && team.textContent !== title) team.textContent = title;
+              const target = korean ? 'https://kr.darkmatterlabs.org/' : 'https://darkmatterlabs.org/';
+              document.querySelectorAll('#tools-apps a').forEach(link => {
+                if (['https://kr.darkmatterlabs.org/', 'https://darkmatterlabs.org/'].includes(link.getAttribute('href')) && link.getAttribute('href') !== target) link.setAttribute('href', target);
+              });
+            }
+            updateLanguageDetails();
+            new MutationObserver(updateLanguageDetails).observe(document.body, {
+              childList:true, subtree:true, attributes:true, attributeFilter:['aria-pressed','lang']
+            });
+          })();'''
+          subprocess.run(['node', '--check'], input=script, text=True, check=True)
+          assert Path('publication/_site/index.html').is_file()
+          marker = 'civic-language-footer-update'
+          for page in Path('publication/_site').rglob('*.html'):
+              content = page.read_text(encoding='utf-8')
+              if marker in content:
+                  continue
+              if '</body>' not in content:
+                  continue
+              content = content.replace('</body>', '<script id="' + marker + '">' + script + '</script>\n</body>')
+              page.write_text(content, encoding='utf-8')
+          PY
       - uses: actions/upload-pages-artifact@v4
         with:
           path: publication/_site

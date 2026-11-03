@@ -107,6 +107,13 @@ jobs:
           grep -q 'Jungeun Kim' publication/_site/assets/site-data-v23.js
           node --check publication/_site/assets/team-popup-v27.js
           node --check publication/_site/assets/site-data-v23.js
+      - name: Install original PoC animation media
+        run: |
+          if [ -f Civic_Ledger_Simulation_Media.zip ]; then
+            unzip -qo Civic_Ledger_Simulation_Media.zip -d publication/_site
+            test -s publication/_site/assets/use-cases/poc1.gif
+            test -s publication/_site/assets/use-cases/poc2.gif
+          fi
       - name: Prepare complete downloadable package
         run: |
           python3 - <<'PY'
@@ -123,6 +130,8 @@ jobs:
           (source / '.github/workflows').mkdir(parents=True)
           shutil.copy2('Civic_Ledger_GitHub_v23.zip', source)
           shutil.copy2('Civic_Ledger_v27_2_Team_Advisors.zip', source)
+          if Path('Civic_Ledger_Simulation_Media.zip').exists():
+              shutil.copy2('Civic_Ledger_Simulation_Media.zip', source)
           shutil.copy2('.github/workflows/pages.yml', source / '.github/workflows/pages.yml')
           readme = '''Civic Ledger — Complete package — 2026-11-02
 
